@@ -355,8 +355,62 @@ function App() {
         );
         if (geoResponse.data && geoResponse.data.address) {
           const addr = geoResponse.data.address;
-          cityName = addr.city || addr.county || addr.town || addr.village || 
-                     addr.suburb || addr.hamlet || cityName;
+          
+          // 构建详细的地点名称
+          const parts = [];
+          
+          // 添加城市
+          if (addr.city) {
+            parts.push(addr.city);
+          } else if (addr.county) {
+            parts.push(addr.county);
+          } else if (addr.state) {
+            parts.push(addr.state);
+          }
+          
+          // 添加区县（如果与城市不同）
+          if (addr.county && addr.county !== addr.city) {
+            parts.push(addr.county);
+          } else if (addr.district) {
+            parts.push(addr.district);
+          }
+          
+          // 添加街道/乡镇
+          if (addr.suburb) {
+            parts.push(addr.suburb);
+          } else if (addr.town) {
+            parts.push(addr.town);
+          } else if (addr.village) {
+            parts.push(addr.village);
+          }
+          
+          // 添加具体位置
+          if (addr.road) {
+            parts.push(addr.road);
+          } else if (addr.hamlet) {
+            parts.push(addr.hamlet);
+          }
+          
+          // 添加地标或兴趣点
+          if (addr.water || addr.natural || addr.leisure) {
+            parts.push(addr.water || addr.natural || addr.leisure);
+          }
+          
+          // 组合成完整名称（去除重复和空格）
+          if (parts.length > 0) {
+            // 去除重复项
+            const uniqueParts = [...new Set(parts)];
+            // 根据部分数量决定分隔符
+            if (uniqueParts.length <= 2) {
+              cityName = uniqueParts.join('');
+            } else {
+              cityName = uniqueParts.join(' ');
+            }
+          } else if (geoResponse.data.display_name) {
+            // 如果没有结构化地址，使用display_name的前几部分
+            const displayParts = geoResponse.data.display_name.split(',').slice(0, 3);
+            cityName = displayParts.join(' ').trim();
+          }
         }
       } catch (geoErr) {
         console.warn('Reverse geocoding failed:', geoErr);
@@ -421,11 +475,63 @@ function App() {
                 `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh-CN`
               );
               if (geoResponse.data && geoResponse.data.address) {
-                cityName = geoResponse.data.address.city || 
-                          geoResponse.data.address.county || 
-                          geoResponse.data.address.town || 
-                          geoResponse.data.address.village || 
-                          '当前位置';
+                const addr = geoResponse.data.address;
+                
+                // 构建详细的地点名称
+                const parts = [];
+                
+                // 添加城市
+                if (addr.city) {
+                  parts.push(addr.city);
+                } else if (addr.county) {
+                  parts.push(addr.county);
+                } else if (addr.state) {
+                  parts.push(addr.state);
+                }
+                
+                // 添加区县（如果与城市不同）
+                if (addr.county && addr.county !== addr.city) {
+                  parts.push(addr.county);
+                } else if (addr.district) {
+                  parts.push(addr.district);
+                }
+                
+                // 添加街道/乡镇
+                if (addr.suburb) {
+                  parts.push(addr.suburb);
+                } else if (addr.town) {
+                  parts.push(addr.town);
+                } else if (addr.village) {
+                  parts.push(addr.village);
+                }
+                
+                // 添加具体位置
+                if (addr.road) {
+                  parts.push(addr.road);
+                } else if (addr.hamlet) {
+                  parts.push(addr.hamlet);
+                }
+                
+                // 添加地标或兴趣点
+                if (addr.water || addr.natural || addr.leisure) {
+                  parts.push(addr.water || addr.natural || addr.leisure);
+                }
+                
+                // 组合成完整名称（去除重复和空格）
+                if (parts.length > 0) {
+                  // 去除重复项
+                  const uniqueParts = [...new Set(parts)];
+                  // 根据部分数量决定分隔符
+                  if (uniqueParts.length <= 2) {
+                    cityName = uniqueParts.join('');
+                  } else {
+                    cityName = uniqueParts.join(' ');
+                  }
+                } else if (geoResponse.data.display_name) {
+                  // 如果没有结构化地址，使用display_name的前几部分
+                  const displayParts = geoResponse.data.display_name.split(',').slice(0, 3);
+                  cityName = displayParts.join(' ').trim();
+                }
               }
             } catch (geoErr) {
               console.warn('Reverse geocoding failed:', geoErr);
