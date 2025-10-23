@@ -12,8 +12,15 @@ import {
   Loader2,
   Sun,
   CloudSnow,
-  AlertCircle
+  AlertCircle,
+  Star,
+  Trash2,
+  Plus,
+  X,
+  Map as MapIcon
 } from 'lucide-react';
+import MapSelector from './MapSelector';
+import 'leaflet/dist/leaflet.css';
 
 // WMO天气代码转换函数
 const getWeatherCondition = (code) => {
@@ -67,6 +74,71 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fishingRecommendation, setFishingRecommendation] = useState(null);
+  const [savedLocations, setSavedLocations] = useState([]);
+  const [showLocationManager, setShowLocationManager] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [viewMode, setViewMode] = useState('search'); // 'search' or 'map'
+  const [selectedMapLocation, setSelectedMapLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState([30.5928, 114.3055]); // 默认武汉中心
+
+  // 从localStorage加载保存的钓点
+  useEffect(() => {
+    const saved = localStorage.getItem('fishingLocations');
+    if (saved) {
+      try {
+        setSavedLocations(JSON.parse(saved));
+      } catch (err) {
+        console.error('Failed to load saved locations:', err);
+      }
+    }
+  }, []);
+
+  // 保存钓点到localStorage
+  const saveLocation = (locationName) => {
+    if (!locationName.trim()) return;
+    
+    const newLocation = {
+      id: Date.now(),
+      name: locationName.trim(),
+      addedAt: new Date().toISOString()
+    };
+    
+    const updated = [...savedLocations, newLocation];
+    setSavedLocations(updated);
+    localStorage.setItem('fishingLocations', JSON.stringify(updated));
+  };
+
+  // 删除保存的钓点
+  const removeLocation = (locationId) => {
+    const updated = savedLocations.filter(loc => loc.id !== locationId);
+    setSavedLocations(updated);
+    localStorage.setItem('fishingLocations', JSON.stringify(updated));
+  };
+
+  // 添加当前查询的城市到常用钓点
+  const addCurrentToSaved = () => {
+    if (!city.trim()) {
+      setError('请先搜索一个地点');
+      setSuccessMessage('');
+      return;
+    }
+    
+    // 检查是否已存在
+    if (savedLocations.some(loc => loc.name === city.trim())) {
+      setError('该地点已在常用钓点中');
+      setSuccessMessage('');
+      return;
+    }
+    
+    saveLocation(city);
+    setError('');
+    setSuccessMessage(`已添加「${city.trim()}」到常用钓点`);
+    
+    // 3秒后自动清除成功提示
+    setTimeout(() => {
+      setSuccessMessage('');
+    }, 3000);
+  };
 
   // 判断是否适合钓鱼的逻辑
   const analyzeFishingConditions = (weatherData) => {
@@ -264,6 +336,68 @@ function App() {
     }
   };
 
+  // 根据经纬度获取天气（用于地图标点）
+  const fetchWeatherByCoordinates = async (latitude, longitude) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      // 1. 使用OpenMeteo获取天气数据
+      const weatherResponse = await axios.get(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&timezone=Asia/Shanghai`
+      );
+      
+      // 2. 获取城市名称（使用逆地理编码）
+      let cityName = `位置 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
+      try {
+        const geoResponse = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh-CN`
+        );
+        if (geoResponse.data && geoResponse.data.address) {
+          const addr = geoResponse.data.address;
+          cityName = addr.city || addr.county || addr.town || addr.village || 
+                     addr.suburb || addr.hamlet || cityName;
+        }
+      } catch (geoErr) {
+        console.warn('Reverse geocoding failed:', geoErr);
+      }
+      
+      // 转换为统一的天气数据格式
+      const weatherData = {
+        name: cityName,
+        main: {
+          temp: weatherResponse.data.current.temperature_2m,
+          feels_like: weatherResponse.data.current.apparent_temperature,
+          humidity: weatherResponse.data.current.relative_humidity_2m,
+          pressure: weatherResponse.data.current.surface_pressure
+        },
+        wind: {
+          speed: weatherResponse.data.current.wind_speed_10m
+        },
+        weather: [{
+          main: getWeatherCondition(weatherResponse.data.current.weather_code),
+          description: getWeatherDescription(weatherResponse.data.current.weather_code)
+        }]
+      };
+      
+      setWeather(weatherData);
+      setCity(cityName);
+      const analysis = analyzeFishingConditions(weatherData);
+      setFishingRecommendation(analysis);
+    } catch (err) {
+      setError('获取天气信息失败，请重试');
+      console.error('Weather API Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理地图上的位置选择
+  const handleMapLocationSelect = (location) => {
+    setSelectedMapLocation(location);
+    fetchWeatherByCoordinates(location.lat, location.lng);
+  };
+
   // 获取用户位置的天气
   const fetchWeatherByLocation = async () => {
     setLoading(true);
@@ -363,8 +497,37 @@ function App() {
           <p className="text-blue-100">根据天气预报判断是否适合钓鱼</p>
         </div>
 
+        {/* View Mode Tabs */}
+        <div className="bg-white rounded-2xl shadow-2xl p-2 mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode('search')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
+                viewMode === 'search'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Search className="w-5 h-5" />
+              <span className="font-medium">搜索查询</span>
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
+                viewMode === 'map'
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <MapIcon className="w-5 h-5" />
+              <span className="font-medium">地图标点</span>
+            </button>
+          </div>
+        </div>
+
         {/* Search Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
+        {viewMode === 'search' && (
+          <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <input
@@ -399,7 +562,125 @@ function App() {
               <span className="text-sm">{error}</span>
             </div>
           )}
+
+          {successMessage && (
+            <div className="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-start gap-2">
+              <Star className="w-5 h-5 flex-shrink-0 mt-0.5 fill-green-500" />
+              <span className="text-sm">{successMessage}</span>
+            </div>
+          )}
+
+          {/* Add to favorites button */}
+          {weather && (
+            <button
+              onClick={addCurrentToSaved}
+              className="w-full mt-4 flex items-center justify-center gap-2 bg-yellow-50 text-yellow-700 py-3 rounded-xl hover:bg-yellow-100 transition-colors border border-yellow-200"
+            >
+              <Star className="w-5 h-5" />
+              收藏当前钓点
+            </button>
+          )}
         </div>
+        )}
+
+        {/* Map View */}
+        {viewMode === 'map' && (
+          <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <MapIcon className="w-5 h-5 text-blue-500" />
+              在地图上标记钓点
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              点击地图上的任意位置，查看该地点的钓鱼指数
+            </p>
+            
+            <MapSelector
+              onLocationSelect={handleMapLocationSelect}
+              selectedLocation={selectedMapLocation}
+              center={mapCenter}
+              zoom={11}
+            />
+
+            {selectedMapLocation && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-700">
+                  <span className="font-semibold">已选位置：</span>
+                  纬度 {selectedMapLocation.lat.toFixed(4)}°, 
+                  经度 {selectedMapLocation.lng.toFixed(4)}°
+                </p>
+              </div>
+            )}
+
+            {loading && (
+              <div className="mt-4 flex items-center justify-center gap-2 text-gray-600">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-sm">正在获取天气数据...</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            {weather && (
+              <button
+                onClick={addCurrentToSaved}
+                className="w-full mt-4 flex items-center justify-center gap-2 bg-yellow-50 text-yellow-700 py-3 rounded-xl hover:bg-yellow-100 transition-colors border border-yellow-200"
+              >
+                <Star className="w-5 h-5" />
+                收藏当前钓点
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Saved Locations */}
+        {savedLocations.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                常用钓点
+              </h3>
+              <span className="text-sm text-gray-500">{savedLocations.length} 个</span>
+            </div>
+            
+            <div className="space-y-2">
+              {savedLocations.map((location) => (
+                <div
+                  key={location.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <button
+                    onClick={() => {
+                      setCity(location.name);
+                      fetchWeather(location.name);
+                    }}
+                    className="flex-1 text-left text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                  >
+                    {location.name}
+                  </button>
+                  <button
+                    onClick={() => removeLocation(location.id)}
+                    className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center">
+                点击钓点名称快速查看天气
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Weather Display */}
         {weather && fishingRecommendation && (
