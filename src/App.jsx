@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import html2canvas from 'html2canvas';
 import { 
   Cloud, 
   CloudRain, 
@@ -17,7 +18,9 @@ import {
   Trash2,
   Plus,
   X,
-  Map as MapIcon
+  Map as MapIcon,
+  Share2,
+  Download
 } from 'lucide-react';
 import MapSelector from './MapSelector';
 import 'leaflet/dist/leaflet.css';
@@ -80,6 +83,9 @@ function App() {
   const [viewMode, setViewMode] = useState('search'); // 'search' or 'map'
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
   const [mapCenter, setMapCenter] = useState([30.5928, 114.3055]); // 默认武汉中心
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const resultRef = useRef(null);
+  const shareContentRef = useRef(null);
 
   // 从localStorage加载保存的钓点
   useEffect(() => {
@@ -582,6 +588,44 @@ function App() {
     fetchWeather(city);
   };
 
+  // 生成分享图片
+  const generateShareImage = async () => {
+    if (!shareContentRef.current) return;
+    
+    setIsGeneratingImage(true);
+    
+    try {
+      // 使用html2canvas将结果区域转换为canvas
+      const canvas = await html2canvas(shareContentRef.current, {
+        backgroundColor: '#3b82f6',
+        scale: 2, // 提高清晰度
+        logging: false,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // 将canvas转换为图片并下载
+      const image = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `钓鱼天气-${weather?.name || '分析'}-${new Date().toLocaleDateString('zh-CN')}.png`;
+      link.click();
+      
+      setSuccessMessage('图片已生成并下载！');
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
+    } catch (err) {
+      console.error('生成图片失败:', err);
+      setError('生成图片失败，请重试');
+      setTimeout(() => {
+        setError('');
+      }, 3000);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
   const getWeatherIcon = (condition) => {
     const main = condition?.toLowerCase() || '';
     if (main.includes('rain')) return <CloudRain className="w-16 h-16" />;
@@ -790,9 +834,11 @@ function App() {
 
         {/* Weather Display */}
         {weather && fishingRecommendation && (
-          <div className="space-y-6">
-            {/* Fishing Recommendation Card */}
-            <div className="bg-white rounded-2xl shadow-2xl p-6">
+          <div ref={resultRef} className="space-y-6">
+            {/* Share Content - 只包含钓鱼推荐和天气详情 */}
+            <div ref={shareContentRef} className="space-y-6">
+              {/* Fishing Recommendation Card */}
+              <div className="bg-white rounded-2xl shadow-2xl p-6">
               <div className={`${fishingRecommendation.color} text-white rounded-xl p-6 mb-4`}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -890,6 +936,32 @@ function App() {
                   <p className="text-xs text-gray-600 mt-1">hPa</p>
                 </div>
               </div>
+            </div>
+            </div>
+
+            {/* Share Button */}
+            <div className="bg-white rounded-2xl shadow-2xl p-6">
+              <button
+                onClick={generateShareImage}
+                disabled={isGeneratingImage}
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span className="font-semibold text-lg">生成中...</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-6 h-6" />
+                    <span className="font-semibold text-lg">生成分享图片</span>
+                    <Download className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+              <p className="text-center text-sm text-gray-500 mt-3">
+                点击生成图片，可分享到社交媒体
+              </p>
             </div>
           </div>
         )}
