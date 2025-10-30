@@ -837,6 +837,29 @@ function App() {
           <div ref={resultRef} className="space-y-6">
             {/* Share Content - 只包含钓鱼推荐和天气详情 */}
             <div ref={shareContentRef} className="space-y-6">
+              {/* Time Info Header */}
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl shadow-2xl p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Fish className="w-6 h-6 flex-shrink-0" />
+                    <span className="text-xl font-bold whitespace-nowrap leading-none">钓鱼天气</span>
+                  </div>
+                  <div className="flex items-center justify-end flex-shrink-0">
+                    <div className="text-sm font-medium whitespace-nowrap leading-none">
+                      {new Date().toLocaleDateString('zh-CN', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                      })} {new Date().toLocaleTimeString('zh-CN', { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Fishing Recommendation Card */}
               <div className="bg-white rounded-2xl shadow-2xl p-6">
               <div className={`${fishingRecommendation.color} text-white rounded-xl p-6 mb-4`}>
