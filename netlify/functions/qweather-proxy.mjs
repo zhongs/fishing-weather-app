@@ -2,11 +2,6 @@ import axios from 'axios';
 import { SignJWT, importPKCS8 } from 'jose';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-// 获取当前文件的目录路径（ES Module 中的 __dirname 替代方案）
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // JWT 配置
 const PROJECT_ID = process.env.QWEATHER_PROJECT_ID;
