@@ -16,6 +16,17 @@ import 'leaflet/dist/leaflet.css';
 
 // 和风天气 API 直接提供中文天气描述，不需要转换函数
 
+// VConsole调试工具初始化
+if (typeof window !== 'undefined') {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('debug') || urlParams.has('vconsole')) {
+    import('vconsole').then(({ default: VConsole }) => {
+      new VConsole();
+      console.log('VConsole已启动 - 移动端调试工具');
+    });
+  }
+}
+
 function App() {
   const [city, setCity] = useState('');
   const [weather, setWeather] = useState(null);
