@@ -57,7 +57,7 @@ function ForecastCard({ forecast, onDayClick }) {
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-5 h-5 text-blue-500" />
-          <h3 className="text-base font-bold text-gray-800">未来5天预报</h3>
+          <h3 className="text-base font-bold text-gray-800">未来7天预报</h3>
           <span className="text-xs text-gray-500 ml-auto">点击查看详情</span>
         </div>
         

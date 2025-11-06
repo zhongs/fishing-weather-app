@@ -272,7 +272,7 @@ function App() {
     try {
       const coords = await getCityCoordinates(cityName);
       const weatherResponse = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=6`
+        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=8`
       );
       
       const weatherData = {
@@ -292,10 +292,10 @@ function App() {
         }]
       };
       
-      // 处理5天预报数据（跳过今天，取接下来5天）
+      // 处理7天预报数据（跳过今天，取接下来7天）
       const forecastData = weatherResponse.data.daily;
       const forecastDays = [];
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 7; i++) {
         forecastDays.push({
           date: forecastData.time[i],
           temp: Math.round((forecastData.temperature_2m_max[i] + forecastData.temperature_2m_min[i]) / 2),
@@ -326,7 +326,7 @@ function App() {
     
     try {
       const weatherResponse = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=6`
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=8`
       );
       
       let cityName = `位置 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
@@ -385,10 +385,10 @@ function App() {
         }]
       };
       
-      // 处理5天预报数据
+      // 处理7天预报数据
       const forecastData = weatherResponse.data.daily;
       const forecastDays = [];
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 7; i++) {
         forecastDays.push({
           date: forecastData.time[i],
           temp: Math.round((forecastData.temperature_2m_max[i] + forecastData.temperature_2m_min[i]) / 2),
@@ -580,7 +580,7 @@ function App() {
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 <div className="space-y-3 pb-2">
-                  {/* 5日预报 - 优先显示 */}
+                  {/* 7日预报 - 优先显示 */}
                   <ForecastCard 
                     forecast={forecast} 
                     onDayClick={handleDayClick}
