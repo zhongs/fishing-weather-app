@@ -10,7 +10,11 @@ const CREDENTIAL_ID = process.env.QWEATHER_CREDENTIAL_ID; // kid（凭据ID）
 // 读取私钥（优先从环境变量，其次从文件）
 let privateKeyPem = process.env.QWEATHER_PRIVATE_KEY;
 
-if (!privateKeyPem) {
+if (privateKeyPem) {
+  // 处理环境变量中的换行符（\n 可能被转义为字符串 "\\n"）
+  privateKeyPem = privateKeyPem.replace(/\\n/g, '\n');
+  console.log('从环境变量读取私钥成功');
+} else {
   // 如果环境变量不存在，尝试从文件读取（本地开发时使用）
   try {
     const keyPath = path.join(process.cwd(), 'ed25519-private.pem');
@@ -20,6 +24,11 @@ if (!privateKeyPem) {
     console.error('无法读取私钥:', error.message);
   }
 }
+
+// 调试日志
+console.log('私钥配置状态:', privateKeyPem ? '已配置' : '未配置');
+console.log('PROJECT_ID:', PROJECT_ID ? '已配置' : '未配置');
+console.log('CREDENTIAL_ID:', CREDENTIAL_ID ? '已配置' : '未配置');
 
 /**
  * 生成 JWT Token（使用 jose 库支持 EdDSA）
