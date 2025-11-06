@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import html2canvas from 'html2canvas';
-import { Fish, Search, Map as MapIcon, Star } from 'lucide-react';
+import { Fish, Search, Map as MapIcon, Star, X } from 'lucide-react';
 import MapSelector from './MapSelector';
 import SearchPanel from './components/SearchPanel';
 import MapPanel from './components/MapPanel';
@@ -32,6 +32,7 @@ function App() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [forecast, setForecast] = useState(null);
   const [selectedDayDetail, setSelectedDayDetail] = useState(null);
+  const [showMapWeather, setShowMapWeather] = useState(true);
   const shareContentRef = useRef(null);
 
   // 从localStorage加载保存的钓点
@@ -422,9 +423,11 @@ function App() {
   };
 
   // 处理地图上的位置选择
-  const handleMapLocationSelect = (location) => {
+  const handleMapLocationSelect = async (location) => {
     setSelectedMapLocation(location);
-    fetchWeatherByCoordinates(location.lat, location.lng);
+    await fetchWeatherByCoordinates(location.lat, location.lng);
+    // 获取天气后自动显示天气详情
+    setShowMapWeather(true);
   };
 
   // 获取用户位置的天气
@@ -495,6 +498,14 @@ function App() {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    // 切换到地图页面时重置天气显示状态
+    if (page === 'map') {
+      setShowMapWeather(true);
+    }
+  };
+
+  const handleCloseMapWeather = () => {
+    setShowMapWeather(false);
   };
 
   const handleDayClick = (day) => {
@@ -549,20 +560,9 @@ function App() {
             />
           </div>
           
-          {/* Floating Info Panel */}
-          {selectedMapLocation && (
-            <div className="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-3 z-10 max-w-md mx-auto">
-              <p className="text-xs text-gray-700">
-                <span className="font-semibold">已选位置：</span>
-                纬度 {selectedMapLocation.lat.toFixed(4)}°, 
-                经度 {selectedMapLocation.lng.toFixed(4)}°
-              </p>
-            </div>
-          )}
-          
           {/* Loading Indicator */}
           {loading && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg px-4 py-2 z-10">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg px-4 py-2 z-10">
               <div className="flex items-center gap-2 text-gray-600">
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -575,33 +575,63 @@ function App() {
           
           {/* Error Message */}
           {error && (
-            <div className="absolute top-20 left-4 right-4 bg-red-50 border border-red-200 text-red-700 rounded-xl shadow-lg p-3 z-10 max-w-md mx-auto">
+            <div className="absolute top-4 left-4 right-4 bg-red-50 border border-red-200 text-red-700 rounded-xl shadow-lg p-3 z-10 max-w-md mx-auto">
               <p className="text-sm">{error}</p>
             </div>
           )}
           
-          {/* Floating Weather Results */}
-          {weather && fishingRecommendation && (
-            <div className="absolute bottom-4 left-4 right-4 max-w-md mx-auto z-10 pointer-events-auto">
+          {/* Map Weather Modal */}
+          {weather && fishingRecommendation && showMapWeather && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+              onClick={handleCloseMapWeather}
+            >
               <div 
-                className="max-h-[60vh] overflow-y-auto overscroll-contain"
-                style={{ WebkitOverflowScrolling: 'touch' }}
+                className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
               >
-                <div className="space-y-3 pb-2">
-                  {/* 7日预报 - 优先显示 */}
-                  <ForecastCard 
-                    forecast={forecast} 
-                    onDayClick={handleDayClick}
-                  />
-                  <FishingAnalysis recommendation={fishingRecommendation} />
-                  <WeatherCard weather={weather} />
+                {/* Header */}
+                <div className="relative bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white px-6 py-5 shadow-lg flex-shrink-0">
                   <button
-                    onClick={addCurrentToSaved}
-                    className="w-full flex items-center justify-center gap-2 bg-white/95 backdrop-blur-sm text-yellow-700 py-3 rounded-xl hover:bg-yellow-50 transition-colors border border-yellow-200 shadow-lg active:scale-95"
+                    onClick={handleCloseMapWeather}
+                    className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-all active:scale-95"
                   >
-                    <Star className="w-5 h-5" />
-                    <span className="font-medium">收藏当前钓点</span>
+                    <X className="w-6 h-6" />
                   </button>
+                  
+                  <div className="pr-12">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Fish className="w-5 h-5" />
+                      <h2 className="text-lg font-semibold">{weather?.name || city}</h2>
+                    </div>
+                    {selectedMapLocation && (
+                      <p className="text-sm text-blue-50/90">
+                        {selectedMapLocation.lat.toFixed(4)}°, {selectedMapLocation.lng.toFixed(4)}°
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scrollable Content */}
+                <div 
+                  className="flex-1 overflow-y-auto overscroll-contain p-4"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
+                  <div className="space-y-3">
+                    <FishingAnalysis recommendation={fishingRecommendation} />
+                    <WeatherCard weather={weather} />
+                    <ForecastCard 
+                      forecast={forecast} 
+                      onDayClick={handleDayClick}
+                    />
+                    <button
+                      onClick={addCurrentToSaved}
+                      className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white py-3 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-lg active:scale-95"
+                    >
+                      <Star className="w-5 h-5" />
+                      <span className="font-medium">收藏当前钓点</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -646,12 +676,6 @@ function App() {
             isGenerating={isGeneratingImage}
           />
         )}
-
-        {/* Footer */}
-        <div className="text-center text-white text-xs pt-4 pb-2 opacity-80">
-          <p>数据仅供参考，实际情况请以现场为准</p>
-          <p className="mt-1">Powered by Open-Meteo & OpenStreetMap</p>
-        </div>
       </div>
       )}
       </div>

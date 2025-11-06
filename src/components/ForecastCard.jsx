@@ -1,7 +1,7 @@
-import { Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, X } from 'lucide-react';
 import { getQWeatherIcon, analyzeFishingConditions as analyzeForecastDay } from '../utils/qweatherIcons.jsx';
 
-function ForecastCard({ forecast, onDayClick }) {
+function ForecastCard({ forecast, onDayClick, onClose, showClose = false }) {
   if (!forecast || forecast.length === 0) return null;
 
   return (
@@ -10,7 +10,17 @@ function ForecastCard({ forecast, onDayClick }) {
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-5 h-5 text-blue-500" />
           <h3 className="text-base font-bold text-gray-800">未来7天预报</h3>
-          <span className="text-xs text-gray-500 ml-auto">点击查看详情</span>
+          {showClose ? (
+            <button
+              onClick={onClose}
+              className="ml-auto p-1.5 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
+              aria-label="关闭"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          ) : (
+            <span className="text-xs text-gray-500 ml-auto">点击查看详情</span>
+          )}
         </div>
         
         <div className="space-y-2">

@@ -42,6 +42,7 @@ function MapSelector({ onLocationSelect, selectedLocation, center, zoom, fullScr
         zoom={mapZoom}
         className="w-full h-full z-0"
         zoomControl={true}
+        attributionControl={false}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
