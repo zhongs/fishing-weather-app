@@ -201,8 +201,9 @@ function App() {
   // 获取城市坐标
   const getCityCoordinates = async (cityName) => {
     try {
+      const amapKey = import.meta.env.VITE_AMAP_KEY;
       const response = await axios.get(
-        `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(cityName)}&output=json&key=f0e1e8a8e5e5c5e5e5e5e5e5e5e5e5e5`
+        `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(cityName)}&output=json&key=${amapKey}`
       );
       
       if (response.data.geocodes && response.data.geocodes.length > 0) {
@@ -282,8 +283,9 @@ function App() {
       let cityName = `位置 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
       try {
         // 使用高德地图逆地理编码（国内访问稳定）
+        const amapKey = import.meta.env.VITE_AMAP_KEY;
         const amapResponse = await axios.get(
-          `https://restapi.amap.com/v3/geocode/regeo?location=${longitude},${latitude}&output=json&key=f0e1e8a8e5e5c5e5e5e5e5e5e5e5e5e5`
+          `https://restapi.amap.com/v3/geocode/regeo?location=${longitude},${latitude}&output=json&key=${amapKey}`
         );
         
         if (amapResponse.data.status === '1' && amapResponse.data.regeocode) {
