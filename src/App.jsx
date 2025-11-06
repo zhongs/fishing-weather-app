@@ -96,75 +96,140 @@ function App() {
     }, 3000);
   };
 
-  // 判断是否适合钓鱼的逻辑
+  // 科学的钓鱼条件分析算法
   const analyzeFishingConditions = (weatherData) => {
     if (!weatherData) return null;
 
     const temp = weatherData.main.temp;
     const windSpeed = weatherData.wind.speed;
     const humidity = weatherData.main.humidity;
-    const weatherCondition = weatherData.weather[0].main.toLowerCase();
+    const weatherText = weatherData.weather[0].description || weatherData.weather[0].main;
     const pressure = weatherData.main.pressure;
 
-    let score = 100;
+    let score = 60; // 基础分60分
     let reasons = [];
     let tips = [];
+    let positiveFactors = [];
 
-    // 温度评分
-    if (temp < 5 || temp > 35) {
-      score -= 30;
-      reasons.push('温度过于极端');
-      tips.push('鱼类活动减少，建议选择其他时间');
-    } else if (temp < 10 || temp > 30) {
+    // 1. 温度评分（权重：25分）
+    if (temp >= 15 && temp <= 25) {
+      score += 25;
+      positiveFactors.push('温度适宜');
+      tips.push('🌡️ 水温适中，鱼类活跃度高');
+    } else if (temp >= 10 && temp < 15) {
+      score += 15;
+      tips.push('🌡️ 温度偏低，鱼口可能较慢');
+    } else if (temp > 25 && temp <= 30) {
+      score += 10;
+      tips.push('🌡️ 温度偏高，建议选择深水区或树荫下');
+    } else if (temp < 10) {
       score -= 15;
-      reasons.push('温度不够理想');
-    } else if (temp >= 15 && temp <= 25) {
-      tips.push('温度适宜，鱼类活跃');
-    }
-
-    // 风速评分
-    if (windSpeed > 10) {
-      score -= 30;
-      reasons.push('风力过大');
-      tips.push('大风影响抛竿，注意安全');
-    } else if (windSpeed > 7) {
-      score -= 15;
-      reasons.push('风力较大');
-    } else if (windSpeed >= 2 && windSpeed <= 5) {
-      tips.push('微风拂面，氧气充足');
-    }
-
-    // 天气条件评分
-    if (weatherCondition.includes('thunderstorm')) {
-      score -= 50;
-      reasons.push('雷暴天气');
-      tips.push('危险！禁止钓鱼');
-    } else if (weatherCondition.includes('rain')) {
-      if (weatherCondition.includes('heavy')) {
-        score -= 25;
-        reasons.push('大雨天气');
-      } else {
-        score += 10;
-        tips.push('小雨天气鱼类觅食活跃');
-      }
-    } else if (weatherCondition.includes('snow')) {
+      reasons.push('温度过低');
+      tips.push('❄️ 冬季钓鱼，选择向阳深水区，用腥饵');
+    } else if (temp > 30) {
       score -= 20;
-      reasons.push('下雪天气');
-    } else if (weatherCondition.includes('clear')) {
-      tips.push('天气晴朗，适合出行');
+      reasons.push('温度过高');
+      tips.push('🔥 高温天气，早晚时段更适合');
     }
 
-    // 气压评分
-    if (pressure < 990 || pressure > 1020) {
-      score -= 10;
-      reasons.push('气压不稳定');
+    // 2. 气压评分（权重：20分，非常关键）
+    if (pressure >= 1005 && pressure <= 1020) {
+      score += 20;
+      positiveFactors.push('气压稳定');
+      tips.push('📊 气压适中，鱼儿开口好');
+    } else if (pressure > 1020) {
+      score += 10;
+      tips.push('📊 高气压，鱼可能在水底，建议钓底');
+    } else if (pressure >= 995 && pressure < 1005) {
+      score -= 5;
+      tips.push('📊 气压偏低，鱼口一般');
     } else {
-      tips.push('气压稳定，利于钓鱼');
+      score -= 15;
+      reasons.push('气压异常');
+      tips.push('⚠️ 气压变化大，鱼不爱咬钩');
     }
 
-    // 湿度评分
-    if (humidity > 85) {
-      tips.push('湿度较高，注意防潮');
+    // 3. 风力评分（权重：15分）
+    if (windSpeed >= 0.5 && windSpeed <= 2) {
+      score += 15;
+      positiveFactors.push('微风');
+      tips.push('🍃 微风增加水中溶氧，鱼活跃');
+    } else if (windSpeed > 2 && windSpeed <= 4) {
+      score += 10;
+      tips.push('💨 风力适中，可选择下风口作钓');
+    } else if (windSpeed > 4 && windSpeed <= 6) {
+      score -= 5;
+      tips.push('💨 风力较大，注意抛竿准确性');
+    } else if (windSpeed > 6) {
+      score -= 20;
+      reasons.push('风力过大');
+      tips.push('🌪️ 大风天气，影响抛竿和观漂');
+    } else {
+      score += 5;
+      tips.push('🎣 无风天气，浮漂信号清晰');
+    }
+
+    // 4. 天气现象评分（权重：20分）
+    const weatherLower = weatherText.toLowerCase();
+    if (weatherLower.includes('小雨') || weatherLower.includes('light rain') || weatherLower.includes('毛毛雨')) {
+      score += 20;
+      positiveFactors.push('小雨天');
+      tips.push('🌧️ 小雨增加溶氧，鱼觅食积极，绝佳时机！');
+    } else if (weatherLower.includes('阴') || weatherLower.includes('cloudy') || weatherLower.includes('overcast')) {
+      score += 15;
+      positiveFactors.push('阴天');
+      tips.push('☁️ 阴天光线柔和，鱼胆子大，更易咬钩');
+    } else if (weatherLower.includes('多云') || weatherLower.includes('partly cloudy')) {
+      score += 10;
+      positiveFactors.push('多云');
+      tips.push('⛅ 云层遮挡部分阳光，较适合作钓');
+    } else if (weatherLower.includes('晴') || weatherLower.includes('clear') || weatherLower.includes('sunny')) {
+      score += 0;
+      tips.push('☀️ 晴天光线强，建议选择浑水或背阴处');
+    } else if (weatherLower.includes('中雨') || weatherLower.includes('moderate rain')) {
+      score -= 10;
+      reasons.push('中雨');
+      tips.push('🌧️ 中雨影响视线，可在雨停前后作钓');
+    } else if (weatherLower.includes('大雨') || weatherLower.includes('heavy rain') || weatherLower.includes('暴雨')) {
+      score -= 30;
+      reasons.push('大雨/暴雨');
+      tips.push('⛈️ 暴雨水浑鱼惊，建议雨后再来');
+    } else if (weatherLower.includes('雷') || weatherLower.includes('thunder')) {
+      score -= 50;
+      reasons.push('雷电天气');
+      tips.push('⚡ 危险！严禁钓鱼，注意人身安全！');
+    } else if (weatherLower.includes('雪') || weatherLower.includes('snow')) {
+      score -= 20;
+      reasons.push('降雪天气');
+      tips.push('❄️ 雪天温度低，鱼口差，不建议出钓');
+    } else if (weatherLower.includes('雾') || weatherLower.includes('fog') || weatherLower.includes('霾')) {
+      score -= 5;
+      tips.push('🌫️ 能见度低，注意安全，影响观漂');
+    }
+
+    // 5. 湿度评分（权重：10分）
+    if (humidity >= 70 && humidity <= 90) {
+      score += 10;
+      tips.push('💧 湿度适宜，舒适度高');
+    } else if (humidity > 90) {
+      score += 5;
+      tips.push('💧 湿度很高，小雨前兆，鱼可能活跃');
+    } else if (humidity < 50) {
+      score -= 5;
+      tips.push('🏜️ 湿度偏低，注意补水防晒');
+    }
+
+    // 6. 时段建议（不计分，仅提示）
+    const hour = new Date().getHours();
+    if ((hour >= 5 && hour <= 9) || (hour >= 16 && hour <= 19)) {
+      tips.push('⏰ 当前是鱼类觅食高峰期，黄金时段！');
+    } else if (hour >= 11 && hour <= 15) {
+      tips.push('🕐 中午时段，可钓深水或阴凉处');
+    }
+
+    // 7. 综合建议
+    if (positiveFactors.length >= 3) {
+      tips.unshift('✨ 多项有利条件叠加，今天出钓成功率高！');
     }
 
     score = Math.max(0, Math.min(100, score));
