@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // JWT 配置
-const PROJECT_ID = process.env.QWEATHER_PROJECT_ID || '3DKTNT9DX3';
+const PROJECT_ID = process.env.QWEATHER_PROJECT_ID;
 const CREDENTIAL_ID = process.env.QWEATHER_CREDENTIAL_ID; // kid（凭据ID）
 
 // 读取私钥
