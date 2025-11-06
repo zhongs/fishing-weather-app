@@ -164,9 +164,10 @@ npm run dev
 - **HTTP 客户端**: Axios
 - **地图库**: Leaflet + React-Leaflet
 - **地图数据**: OpenStreetMap
-- **天气数据**: Open-Meteo API (免费，无需API key)
+- **天气数据**: 和风天气 API (国内访问快，数据准确)
 - **地理编码**: OpenStreetMap Nominatim
 - **图片生成**: html2canvas (用于分享功能)
+- **后端**: Netlify Serverless Functions (JWT 认证代理)
 
 ## 📦 项目结构
 

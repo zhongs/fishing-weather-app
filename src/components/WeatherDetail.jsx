@@ -3,39 +3,10 @@ import {
   ThermometerSun, 
   Wind, 
   Droplets, 
-  Cloud, 
-  CloudRain, 
-  Sun, 
-  CloudSnow,
   Fish,
   AlertCircle
 } from 'lucide-react';
-
-const getWeatherIcon = (code, size = 'w-16 h-16') => {
-  if (code === 0) return <Sun className={size} />;
-  if (code <= 3) return <Cloud className={size} />;
-  if (code >= 51 && code <= 67) return <CloudRain className={size} />;
-  if (code >= 71 && code <= 77) return <CloudSnow className={size} />;
-  if (code >= 80 && code <= 82) return <CloudRain className={size} />;
-  if (code >= 85 && code <= 86) return <CloudSnow className={size} />;
-  return <Cloud className={size} />;
-};
-
-const getWeatherDescription = (code) => {
-  const weatherMap = {
-    0: '晴朗', 1: '基本晴朗', 2: '部分多云', 3: '阴天',
-    45: '有雾', 48: '雾凇',
-    51: '小毛毛雨', 53: '中等毛毛雨', 55: '大毛毛雨',
-    56: '冻毛毛雨', 57: '大冻毛毛雨',
-    61: '小雨', 63: '中雨', 65: '大雨',
-    66: '冻小雨', 67: '冻大雨',
-    71: '小雪', 73: '中雪', 75: '大雪', 77: '雪粒',
-    80: '小阵雨', 81: '中阵雨', 82: '大阵雨',
-    85: '小阵雪', 86: '大阵雪',
-    95: '雷暴', 96: '雷暴伴小冰雹', 99: '雷暴伴大冰雹'
-  };
-  return weatherMap[code] || '未知';
-};
+import { getQWeatherIcon } from '../utils/qweatherIcons.jsx';
 
 const analyzeDayDetail = (day) => {
   const avgTemp = day.temp;
@@ -159,11 +130,11 @@ function WeatherDetail({ day, locationName, onClose }) {
             <div className="text-center -mt-2">
               <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 mb-3 shadow-inner">
                 <div className="text-blue-500">
-                  {getWeatherIcon(day.weatherCode, 'w-16 h-16')}
+                  {getQWeatherIcon(day.weatherCode, 'w-16 h-16')}
                 </div>
               </div>
               <p className="text-xl font-bold text-gray-800">
-                {getWeatherDescription(day.weatherCode)}
+                {day.text || '天气'}
               </p>
             </div>
 

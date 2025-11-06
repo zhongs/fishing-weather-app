@@ -12,35 +12,10 @@ import ForecastCard from './components/ForecastCard';
 import WeatherDetail from './components/WeatherDetail';
 import UserCenter from './components/UserCenter';
 import BottomNav from './components/BottomNav';
+import { getNowWeather, get7DayForecast, convertQWeatherToAppFormat } from './utils/qweatherApi';
 import 'leaflet/dist/leaflet.css';
 
-// WMO天气代码转换函数
-const getWeatherCondition = (code) => {
-  if (code === 0) return 'Clear';
-  if (code <= 3) return 'Clouds';
-  if (code >= 51 && code <= 67) return 'Rain';
-  if (code >= 71 && code <= 77) return 'Snow';
-  if (code >= 80 && code <= 82) return 'Rain';
-  if (code >= 85 && code <= 86) return 'Snow';
-  if (code >= 95 && code <= 99) return 'Thunderstorm';
-  return 'Clouds';
-};
-
-const getWeatherDescription = (code) => {
-  const weatherMap = {
-    0: '晴朗', 1: '基本晴朗', 2: '部分多云', 3: '阴天',
-    45: '有雾', 48: '雾凇',
-    51: '小毛毛雨', 53: '中等毛毛雨', 55: '大毛毛雨',
-    56: '冻毛毛雨', 57: '大冻毛毛雨',
-    61: '小雨', 63: '中雨', 65: '大雨',
-    66: '冻小雨', 67: '冻大雨',
-    71: '小雪', 73: '中雪', 75: '大雪', 77: '雪粒',
-    80: '小阵雨', 81: '中阵雨', 82: '大阵雨',
-    85: '小阵雪', 86: '大阵雪',
-    95: '雷暴', 96: '雷暴伴小冰雹', 99: '雷暴伴大冰雹'
-  };
-  return weatherMap[code] || '未知';
-};
+// 和风天气 API 直接提供中文天气描述，不需要转换函数
 
 function App() {
   const [city, setCity] = useState('');
@@ -271,41 +246,19 @@ function App() {
     
     try {
       const coords = await getCityCoordinates(cityName);
-      const weatherResponse = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=8`
+      
+      // 使用和风天气 API
+      const [nowData, forecastData] = await Promise.all([
+        getNowWeather(coords.latitude, coords.longitude),
+        get7DayForecast(coords.latitude, coords.longitude)
+      ]);
+      
+      // 转换为应用格式
+      const { weatherData, forecastDays } = convertQWeatherToAppFormat(
+        nowData, 
+        forecastData, 
+        cityName
       );
-      
-      const weatherData = {
-        name: cityName,
-        main: {
-          temp: weatherResponse.data.current.temperature_2m,
-          feels_like: weatherResponse.data.current.apparent_temperature,
-          humidity: weatherResponse.data.current.relative_humidity_2m,
-          pressure: weatherResponse.data.current.surface_pressure
-        },
-        wind: {
-          speed: weatherResponse.data.current.wind_speed_10m
-        },
-        weather: [{
-          main: getWeatherCondition(weatherResponse.data.current.weather_code),
-          description: getWeatherDescription(weatherResponse.data.current.weather_code)
-        }]
-      };
-      
-      // 处理7天预报数据（跳过今天，取接下来7天）
-      const forecastData = weatherResponse.data.daily;
-      const forecastDays = [];
-      for (let i = 1; i <= 7; i++) {
-        forecastDays.push({
-          date: forecastData.time[i],
-          temp: Math.round((forecastData.temperature_2m_max[i] + forecastData.temperature_2m_min[i]) / 2),
-          tempMax: Math.round(forecastData.temperature_2m_max[i]),
-          tempMin: Math.round(forecastData.temperature_2m_min[i]),
-          windSpeed: forecastData.wind_speed_10m_max[i],
-          weatherCode: forecastData.weather_code[i],
-          precipitation: forecastData.precipitation_sum[i]
-        });
-      }
       
       setWeather(weatherData);
       setForecast(forecastDays);
@@ -325,10 +278,7 @@ function App() {
     setError('');
     
     try {
-      const weatherResponse = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=8`
-      );
-      
+      // 获取地点名称
       let cityName = `位置 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
       try {
         const geoResponse = await axios.get(
@@ -368,37 +318,18 @@ function App() {
         console.warn('Reverse geocoding failed:', geoErr);
       }
       
-      const weatherData = {
-        name: cityName,
-        main: {
-          temp: weatherResponse.data.current.temperature_2m,
-          feels_like: weatherResponse.data.current.apparent_temperature,
-          humidity: weatherResponse.data.current.relative_humidity_2m,
-          pressure: weatherResponse.data.current.surface_pressure
-        },
-        wind: {
-          speed: weatherResponse.data.current.wind_speed_10m
-        },
-        weather: [{
-          main: getWeatherCondition(weatherResponse.data.current.weather_code),
-          description: getWeatherDescription(weatherResponse.data.current.weather_code)
-        }]
-      };
+      // 使用和风天气 API
+      const [nowData, forecastData] = await Promise.all([
+        getNowWeather(latitude, longitude),
+        get7DayForecast(latitude, longitude)
+      ]);
       
-      // 处理7天预报数据
-      const forecastData = weatherResponse.data.daily;
-      const forecastDays = [];
-      for (let i = 1; i <= 7; i++) {
-        forecastDays.push({
-          date: forecastData.time[i],
-          temp: Math.round((forecastData.temperature_2m_max[i] + forecastData.temperature_2m_min[i]) / 2),
-          tempMax: Math.round(forecastData.temperature_2m_max[i]),
-          tempMin: Math.round(forecastData.temperature_2m_min[i]),
-          windSpeed: forecastData.wind_speed_10m_max[i],
-          weatherCode: forecastData.weather_code[i],
-          precipitation: forecastData.precipitation_sum[i]
-        });
-      }
+      // 转换为应用格式
+      const { weatherData, forecastDays } = convertQWeatherToAppFormat(
+        nowData, 
+        forecastData, 
+        cityName
+      );
       
       setWeather(weatherData);
       setCity(cityName);
