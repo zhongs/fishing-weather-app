@@ -7,13 +7,18 @@ import path from 'path';
 const PROJECT_ID = process.env.QWEATHER_PROJECT_ID;
 const CREDENTIAL_ID = process.env.QWEATHER_CREDENTIAL_ID; // kid（凭据ID）
 
-// 读取私钥
-let privateKeyPem;
-try {
-  const keyPath = path.join(process.cwd(), 'ed25519-private.pem');
-  privateKeyPem = fs.readFileSync(keyPath, 'utf8');
-} catch (error) {
-  console.error('无法读取私钥文件:', error);
+// 读取私钥（优先从环境变量，其次从文件）
+let privateKeyPem = process.env.QWEATHER_PRIVATE_KEY;
+
+if (!privateKeyPem) {
+  // 如果环境变量不存在，尝试从文件读取（本地开发时使用）
+  try {
+    const keyPath = path.join(process.cwd(), 'ed25519-private.pem');
+    privateKeyPem = fs.readFileSync(keyPath, 'utf8');
+    console.log('从文件读取私钥成功');
+  } catch (error) {
+    console.error('无法读取私钥:', error.message);
+  }
 }
 
 /**
