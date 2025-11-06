@@ -1,28 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import html2canvas from 'html2canvas';
-import { 
-  Cloud, 
-  CloudRain, 
-  Wind, 
-  Droplets, 
-  ThermometerSun, 
-  Fish,
-  MapPin,
-  Search,
-  Loader2,
-  Sun,
-  CloudSnow,
-  AlertCircle,
-  Star,
-  Trash2,
-  Plus,
-  X,
-  Map as MapIcon,
-  Share2,
-  Download
-} from 'lucide-react';
+import { Fish, Search, Map as MapIcon, Star } from 'lucide-react';
 import MapSelector from './MapSelector';
+import SearchPanel from './components/SearchPanel';
+import MapPanel from './components/MapPanel';
+import FishingAnalysis from './components/FishingAnalysis';
+import WeatherCard from './components/WeatherCard';
+import ShareButton from './components/ShareButton';
+import ForecastCard from './components/ForecastCard';
+import WeatherDetail from './components/WeatherDetail';
+import UserCenter from './components/UserCenter';
+import BottomNav from './components/BottomNav';
 import 'leaflet/dist/leaflet.css';
 
 // WMO天气代码转换函数
@@ -39,34 +28,16 @@ const getWeatherCondition = (code) => {
 
 const getWeatherDescription = (code) => {
   const weatherMap = {
-    0: '晴朗',
-    1: '基本晴朗',
-    2: '部分多云',
-    3: '阴天',
-    45: '有雾',
-    48: '雾凇',
-    51: '小毛毛雨',
-    53: '中等毛毛雨',
-    55: '大毛毛雨',
-    56: '冻毛毛雨',
-    57: '大冻毛毛雨',
-    61: '小雨',
-    63: '中雨',
-    65: '大雨',
-    66: '冻小雨',
-    67: '冻大雨',
-    71: '小雪',
-    73: '中雪',
-    75: '大雪',
-    77: '雪粒',
-    80: '小阵雨',
-    81: '中阵雨',
-    82: '大阵雨',
-    85: '小阵雪',
-    86: '大阵雪',
-    95: '雷暴',
-    96: '雷暴伴小冰雹',
-    99: '雷暴伴大冰雹'
+    0: '晴朗', 1: '基本晴朗', 2: '部分多云', 3: '阴天',
+    45: '有雾', 48: '雾凇',
+    51: '小毛毛雨', 53: '中等毛毛雨', 55: '大毛毛雨',
+    56: '冻毛毛雨', 57: '大冻毛毛雨',
+    61: '小雨', 63: '中雨', 65: '大雨',
+    66: '冻小雨', 67: '冻大雨',
+    71: '小雪', 73: '中雪', 75: '大雪', 77: '雪粒',
+    80: '小阵雨', 81: '中阵雨', 82: '大阵雨',
+    85: '小阵雪', 86: '大阵雪',
+    95: '雷暴', 96: '雷暴伴小冰雹', 99: '雷暴伴大冰雹'
   };
   return weatherMap[code] || '未知';
 };
@@ -78,13 +49,14 @@ function App() {
   const [error, setError] = useState('');
   const [fishingRecommendation, setFishingRecommendation] = useState(null);
   const [savedLocations, setSavedLocations] = useState([]);
-  const [showLocationManager, setShowLocationManager] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [viewMode, setViewMode] = useState('search'); // 'search' or 'map'
+  const [viewMode, setViewMode] = useState('search');
+  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'map', 'profile'
   const [selectedMapLocation, setSelectedMapLocation] = useState(null);
-  const [mapCenter, setMapCenter] = useState([30.5928, 114.3055]); // 默认武汉中心
+  const [mapCenter] = useState([30.5928, 114.3055]);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const resultRef = useRef(null);
+  const [forecast, setForecast] = useState(null);
+  const [selectedDayDetail, setSelectedDayDetail] = useState(null);
   const shareContentRef = useRef(null);
 
   // 从localStorage加载保存的钓点
@@ -97,6 +69,11 @@ function App() {
         console.error('Failed to load saved locations:', err);
       }
     }
+  }, []);
+
+  // 页面加载时自动获取用户位置
+  useEffect(() => {
+    fetchWeatherByLocation();
   }, []);
 
   // 保存钓点到localStorage
@@ -129,7 +106,6 @@ function App() {
       return;
     }
     
-    // 检查是否已存在
     if (savedLocations.some(loc => loc.name === city.trim())) {
       setError('该地点已在常用钓点中');
       setSuccessMessage('');
@@ -140,7 +116,6 @@ function App() {
     setError('');
     setSuccessMessage(`已添加「${city.trim()}」到常用钓点`);
     
-    // 3秒后自动清除成功提示
     setTimeout(() => {
       setSuccessMessage('');
     }, 3000);
@@ -160,7 +135,7 @@ function App() {
     let reasons = [];
     let tips = [];
 
-    // 温度评分 (最佳温度15-25°C)
+    // 温度评分
     if (temp < 5 || temp > 35) {
       score -= 30;
       reasons.push('温度过于极端');
@@ -172,7 +147,7 @@ function App() {
       tips.push('温度适宜，鱼类活跃');
     }
 
-    // 风速评分 (最佳风速2-5m/s)
+    // 风速评分
     if (windSpeed > 10) {
       score -= 30;
       reasons.push('风力过大');
@@ -204,7 +179,7 @@ function App() {
       tips.push('天气晴朗，适合出行');
     }
 
-    // 气压评分 (最佳气压990-1020hPa)
+    // 气压评分
     if (pressure < 990 || pressure > 1020) {
       score -= 10;
       reasons.push('气压不稳定');
@@ -217,7 +192,6 @@ function App() {
       tips.push('湿度较高，注意防潮');
     }
 
-    // 确保分数在0-100之间
     score = Math.max(0, Math.min(100, score));
 
     let recommendation = '';
@@ -246,20 +220,12 @@ function App() {
       color = 'bg-red-500';
     }
 
-    return {
-      score,
-      recommendation,
-      level,
-      color,
-      reasons,
-      tips
-    };
+    return { score, recommendation, level, color, reasons, tips };
   };
 
-  // 获取城市坐标（使用高德地理编码API）
+  // 获取城市坐标
   const getCityCoordinates = async (cityName) => {
     try {
-      // 使用高德地理编码API（免费，无需key的备用方案）
       const response = await axios.get(
         `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(cityName)}&output=json&key=f0e1e8a8e5e5c5e5e5e5e5e5e5e5e5e5`
       );
@@ -273,7 +239,6 @@ function App() {
         };
       }
       
-      // 备用：使用nominatim地理编码（完全免费）
       const nominatimResponse = await axios.get(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cityName)},中国&format=json&limit=1&accept-language=zh-CN`
       );
@@ -294,7 +259,7 @@ function App() {
     }
   };
 
-  // 获取天气数据（使用OpenMeteo API - 完全免费，无需API key）
+  // 获取天气数据
   const fetchWeather = async (cityName) => {
     if (!cityName.trim()) {
       setError('请输入城市名称');
@@ -305,15 +270,11 @@ function App() {
     setError('');
     
     try {
-      // 1. 先获取城市坐标
       const coords = await getCityCoordinates(cityName);
-      
-      // 2. 使用OpenMeteo获取天气数据（完全免费，无需API key）
       const weatherResponse = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&timezone=Asia/Shanghai`
+        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=6`
       );
       
-      // 转换为统一的天气数据格式
       const weatherData = {
         name: cityName,
         main: {
@@ -331,7 +292,23 @@ function App() {
         }]
       };
       
+      // 处理5天预报数据（跳过今天，取接下来5天）
+      const forecastData = weatherResponse.data.daily;
+      const forecastDays = [];
+      for (let i = 1; i <= 5; i++) {
+        forecastDays.push({
+          date: forecastData.time[i],
+          temp: Math.round((forecastData.temperature_2m_max[i] + forecastData.temperature_2m_min[i]) / 2),
+          tempMax: Math.round(forecastData.temperature_2m_max[i]),
+          tempMin: Math.round(forecastData.temperature_2m_min[i]),
+          windSpeed: forecastData.wind_speed_10m_max[i],
+          weatherCode: forecastData.weather_code[i],
+          precipitation: forecastData.precipitation_sum[i]
+        });
+      }
+      
       setWeather(weatherData);
+      setForecast(forecastDays);
       const analysis = analyzeFishingConditions(weatherData);
       setFishingRecommendation(analysis);
     } catch (err) {
@@ -342,18 +319,16 @@ function App() {
     }
   };
 
-  // 根据经纬度获取天气（用于地图标点）
+  // 根据经纬度获取天气
   const fetchWeatherByCoordinates = async (latitude, longitude) => {
     setLoading(true);
     setError('');
     
     try {
-      // 1. 使用OpenMeteo获取天气数据
       const weatherResponse = await axios.get(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&timezone=Asia/Shanghai`
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,precipitation_sum&timezone=Asia/Shanghai&forecast_days=6`
       );
       
-      // 2. 获取城市名称（使用逆地理编码）
       let cityName = `位置 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
       try {
         const geoResponse = await axios.get(
@@ -361,59 +336,30 @@ function App() {
         );
         if (geoResponse.data && geoResponse.data.address) {
           const addr = geoResponse.data.address;
-          
-          // 构建详细的地点名称
           const parts = [];
           
-          // 添加城市
-          if (addr.city) {
-            parts.push(addr.city);
-          } else if (addr.county) {
-            parts.push(addr.county);
-          } else if (addr.state) {
-            parts.push(addr.state);
-          }
+          if (addr.city) parts.push(addr.city);
+          else if (addr.county) parts.push(addr.county);
+          else if (addr.state) parts.push(addr.state);
           
-          // 添加区县（如果与城市不同）
-          if (addr.county && addr.county !== addr.city) {
-            parts.push(addr.county);
-          } else if (addr.district) {
-            parts.push(addr.district);
-          }
+          if (addr.county && addr.county !== addr.city) parts.push(addr.county);
+          else if (addr.district) parts.push(addr.district);
           
-          // 添加街道/乡镇
-          if (addr.suburb) {
-            parts.push(addr.suburb);
-          } else if (addr.town) {
-            parts.push(addr.town);
-          } else if (addr.village) {
-            parts.push(addr.village);
-          }
+          if (addr.suburb) parts.push(addr.suburb);
+          else if (addr.town) parts.push(addr.town);
+          else if (addr.village) parts.push(addr.village);
           
-          // 添加具体位置
-          if (addr.road) {
-            parts.push(addr.road);
-          } else if (addr.hamlet) {
-            parts.push(addr.hamlet);
-          }
+          if (addr.road) parts.push(addr.road);
+          else if (addr.hamlet) parts.push(addr.hamlet);
           
-          // 添加地标或兴趣点
           if (addr.water || addr.natural || addr.leisure) {
             parts.push(addr.water || addr.natural || addr.leisure);
           }
           
-          // 组合成完整名称（去除重复和空格）
           if (parts.length > 0) {
-            // 去除重复项
             const uniqueParts = [...new Set(parts)];
-            // 根据部分数量决定分隔符
-            if (uniqueParts.length <= 2) {
-              cityName = uniqueParts.join('');
-            } else {
-              cityName = uniqueParts.join(' ');
-            }
+            cityName = uniqueParts.length <= 2 ? uniqueParts.join('') : uniqueParts.join(' ');
           } else if (geoResponse.data.display_name) {
-            // 如果没有结构化地址，使用display_name的前几部分
             const displayParts = geoResponse.data.display_name.split(',').slice(0, 3);
             cityName = displayParts.join(' ').trim();
           }
@@ -422,7 +368,6 @@ function App() {
         console.warn('Reverse geocoding failed:', geoErr);
       }
       
-      // 转换为统一的天气数据格式
       const weatherData = {
         name: cityName,
         main: {
@@ -440,8 +385,24 @@ function App() {
         }]
       };
       
+      // 处理5天预报数据
+      const forecastData = weatherResponse.data.daily;
+      const forecastDays = [];
+      for (let i = 1; i <= 5; i++) {
+        forecastDays.push({
+          date: forecastData.time[i],
+          temp: Math.round((forecastData.temperature_2m_max[i] + forecastData.temperature_2m_min[i]) / 2),
+          tempMax: Math.round(forecastData.temperature_2m_max[i]),
+          tempMin: Math.round(forecastData.temperature_2m_min[i]),
+          windSpeed: forecastData.wind_speed_10m_max[i],
+          weatherCode: forecastData.weather_code[i],
+          precipitation: forecastData.precipitation_sum[i]
+        });
+      }
+      
       setWeather(weatherData);
       setCity(cityName);
+      setForecast(forecastDays);
       const analysis = analyzeFishingConditions(weatherData);
       setFishingRecommendation(analysis);
     } catch (err) {
@@ -466,113 +427,10 @@ function App() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            
-            // 1. 使用OpenMeteo获取天气数据
-            const weatherResponse = await axios.get(
-              `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,surface_pressure,wind_speed_10m&timezone=Asia/Shanghai`
-            );
-            
-            // 2. 获取城市名称（使用逆地理编码）
-            let cityName = '当前位置';
-            try {
-              const geoResponse = await axios.get(
-                `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh-CN`
-              );
-              if (geoResponse.data && geoResponse.data.address) {
-                const addr = geoResponse.data.address;
-                
-                // 构建详细的地点名称
-                const parts = [];
-                
-                // 添加城市
-                if (addr.city) {
-                  parts.push(addr.city);
-                } else if (addr.county) {
-                  parts.push(addr.county);
-                } else if (addr.state) {
-                  parts.push(addr.state);
-                }
-                
-                // 添加区县（如果与城市不同）
-                if (addr.county && addr.county !== addr.city) {
-                  parts.push(addr.county);
-                } else if (addr.district) {
-                  parts.push(addr.district);
-                }
-                
-                // 添加街道/乡镇
-                if (addr.suburb) {
-                  parts.push(addr.suburb);
-                } else if (addr.town) {
-                  parts.push(addr.town);
-                } else if (addr.village) {
-                  parts.push(addr.village);
-                }
-                
-                // 添加具体位置
-                if (addr.road) {
-                  parts.push(addr.road);
-                } else if (addr.hamlet) {
-                  parts.push(addr.hamlet);
-                }
-                
-                // 添加地标或兴趣点
-                if (addr.water || addr.natural || addr.leisure) {
-                  parts.push(addr.water || addr.natural || addr.leisure);
-                }
-                
-                // 组合成完整名称（去除重复和空格）
-                if (parts.length > 0) {
-                  // 去除重复项
-                  const uniqueParts = [...new Set(parts)];
-                  // 根据部分数量决定分隔符
-                  if (uniqueParts.length <= 2) {
-                    cityName = uniqueParts.join('');
-                  } else {
-                    cityName = uniqueParts.join(' ');
-                  }
-                } else if (geoResponse.data.display_name) {
-                  // 如果没有结构化地址，使用display_name的前几部分
-                  const displayParts = geoResponse.data.display_name.split(',').slice(0, 3);
-                  cityName = displayParts.join(' ').trim();
-                }
-              }
-            } catch (geoErr) {
-              console.warn('Reverse geocoding failed:', geoErr);
-            }
-            
-            // 转换为统一的天气数据格式
-            const weatherData = {
-              name: cityName,
-              main: {
-                temp: weatherResponse.data.current.temperature_2m,
-                feels_like: weatherResponse.data.current.apparent_temperature,
-                humidity: weatherResponse.data.current.relative_humidity_2m,
-                pressure: weatherResponse.data.current.surface_pressure
-              },
-              wind: {
-                speed: weatherResponse.data.current.wind_speed_10m
-              },
-              weather: [{
-                main: getWeatherCondition(weatherResponse.data.current.weather_code),
-                description: getWeatherDescription(weatherResponse.data.current.weather_code)
-              }]
-            };
-            
-            setWeather(weatherData);
-            setCity(cityName);
-            const analysis = analyzeFishingConditions(weatherData);
-            setFishingRecommendation(analysis);
-          } catch (err) {
-            setError('获取天气信息失败');
-            console.error('Weather API Error:', err);
-          } finally {
-            setLoading(false);
-          }
+          const { latitude, longitude } = position.coords;
+          await fetchWeatherByCoordinates(latitude, longitude);
         },
-        (err) => {
+        () => {
           setError('无法获取位置信息，请手动输入城市');
           setLoading(false);
         }
@@ -595,16 +453,14 @@ function App() {
     setIsGeneratingImage(true);
     
     try {
-      // 使用html2canvas将结果区域转换为canvas
       const canvas = await html2canvas(shareContentRef.current, {
-        backgroundColor: '#3b82f6',
-        scale: 2, // 提高清晰度
+        backgroundColor: '#ffffff',
+        scale: 2,
         logging: false,
         useCORS: true,
         allowTaint: true
       });
       
-      // 将canvas转换为图片并下载
       const image = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = image;
@@ -612,389 +468,191 @@ function App() {
       link.click();
       
       setSuccessMessage('图片已生成并下载！');
-      setTimeout(() => {
-        setSuccessMessage('');
-      }, 3000);
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
       console.error('生成图片失败:', err);
       setError('生成图片失败，请重试');
-      setTimeout(() => {
-        setError('');
-      }, 3000);
+      setTimeout(() => setError(''), 3000);
     } finally {
       setIsGeneratingImage(false);
     }
   };
 
-  const getWeatherIcon = (condition) => {
-    const main = condition?.toLowerCase() || '';
-    if (main.includes('rain')) return <CloudRain className="w-16 h-16" />;
-    if (main.includes('cloud')) return <Cloud className="w-16 h-16" />;
-    if (main.includes('clear')) return <Sun className="w-16 h-16" />;
-    if (main.includes('snow')) return <CloudSnow className="w-16 h-16" />;
-    return <Cloud className="w-16 h-16" />;
+  const handleSavedLocationSelect = (locationName) => {
+    setCity(locationName);
+    fetchWeather(locationName);
+    setViewMode('search');
+    setCurrentPage('home');
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleDayClick = (day) => {
+    setSelectedDayDetail(day);
+  };
+
+  const handleCloseDayDetail = () => {
+    setSelectedDayDetail(null);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 p-4">
-      <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="text-center text-white mb-8 pt-8">
-          <div className="flex items-center justify-center mb-4">
-            <Fish className="w-12 h-12 mr-3" />
-            <h1 className="text-4xl font-bold">钓鱼天气</h1>
-          </div>
-          <p className="text-blue-100">根据天气预报判断是否适合钓鱼</p>
-        </div>
-
-        {/* View Mode Tabs */}
-        <div className="bg-white rounded-2xl shadow-2xl p-2 mb-6">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode('search')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-                viewMode === 'search'
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <Search className="w-5 h-5" />
-              <span className="font-medium">搜索查询</span>
-            </button>
-            <button
-              onClick={() => setViewMode('map')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${
-                viewMode === 'map'
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <MapIcon className="w-5 h-5" />
-              <span className="font-medium">地图标点</span>
-            </button>
+    <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex flex-col overflow-hidden">
+      {/* Fixed Header - 仅在个人中心页面隐藏 */}
+      {currentPage !== 'profile' && (
+      <div className="flex-shrink-0 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-lg">
+        <div className="max-w-md mx-auto px-4 pt-4 pb-3">
+          <div className="text-center text-white">
+            <div className="flex items-center justify-center">
+              <Fish className="w-8 h-8 mr-2" />
+              <h1 className="text-2xl font-bold">钓鱼天气</h1>
+            </div>
           </div>
         </div>
+      </div>
+      )}
 
-        {/* Search Form */}
-        {viewMode === 'search' && (
-          <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <input
-                type="text"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="输入城市名称..."
-                className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-400"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-              </button>
-            </div>
-          </form>
-
-          <button
-            onClick={fetchWeatherByLocation}
-            disabled={loading}
-            className="w-full mt-4 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-xl hover:bg-gray-200 transition-colors disabled:bg-gray-300"
-          >
-            <MapPin className="w-5 h-5" />
-            使用当前位置
-          </button>
-
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-start gap-2">
-              <Star className="w-5 h-5 flex-shrink-0 mt-0.5 fill-green-500" />
-              <span className="text-sm">{successMessage}</span>
-            </div>
-          )}
-
-          {/* Add to favorites button */}
-          {weather && (
-            <button
-              onClick={addCurrentToSaved}
-              className="w-full mt-4 flex items-center justify-center gap-2 bg-yellow-50 text-yellow-700 py-3 rounded-xl hover:bg-yellow-100 transition-colors border border-yellow-200"
-            >
-              <Star className="w-5 h-5" />
-              收藏当前钓点
-            </button>
-          )}
-        </div>
-        )}
-
-        {/* Map View */}
-        {viewMode === 'map' && (
-          <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <MapIcon className="w-5 h-5 text-blue-500" />
-              在地图上标记钓点
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              点击地图上的任意位置，查看该地点的钓鱼指数
-            </p>
-            
+      {/* Main Content - Scrollable */}
+      <div 
+        className="flex-1 overflow-y-scroll pb-20"
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain'
+        }}
+      >
+      {currentPage === 'profile' ? (
+        <UserCenter
+          locations={savedLocations}
+          onSelect={handleSavedLocationSelect}
+          onRemove={removeLocation}
+          onClose={() => setCurrentPage('home')}
+        />
+      ) : currentPage === 'map' ? (
+        <div className="h-full relative">
+          {/* Full Screen Map */}
+          <div className="absolute inset-0">
             <MapSelector
               onLocationSelect={handleMapLocationSelect}
               selectedLocation={selectedMapLocation}
               center={mapCenter}
               zoom={11}
+              fullScreen={true}
             />
-
-            {selectedMapLocation && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                <p className="text-sm text-blue-700">
-                  <span className="font-semibold">已选位置：</span>
-                  纬度 {selectedMapLocation.lat.toFixed(4)}°, 
-                  经度 {selectedMapLocation.lng.toFixed(4)}°
-                </p>
-              </div>
-            )}
-
-            {loading && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-gray-600">
-                <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+          
+          {/* Floating Info Panel */}
+          {selectedMapLocation && (
+            <div className="absolute top-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-3 z-10 max-w-md mx-auto">
+              <p className="text-xs text-gray-700">
+                <span className="font-semibold">已选位置：</span>
+                纬度 {selectedMapLocation.lat.toFixed(4)}°, 
+                经度 {selectedMapLocation.lng.toFixed(4)}°
+              </p>
+            </div>
+          )}
+          
+          {/* Loading Indicator */}
+          {loading && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg px-4 py-2 z-10">
+              <div className="flex items-center gap-2 text-gray-600">
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
                 <span className="text-sm">正在获取天气数据...</span>
               </div>
-            )}
-
-            {error && (
-              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            {weather && (
-              <button
-                onClick={addCurrentToSaved}
-                className="w-full mt-4 flex items-center justify-center gap-2 bg-yellow-50 text-yellow-700 py-3 rounded-xl hover:bg-yellow-100 transition-colors border border-yellow-200"
-              >
-                <Star className="w-5 h-5" />
-                收藏当前钓点
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Saved Locations */}
-        {savedLocations.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                常用钓点
-              </h3>
-              <span className="text-sm text-gray-500">{savedLocations.length} 个</span>
             </div>
-            
-            <div className="space-y-2">
-              {savedLocations.map((location) => (
-                <div
-                  key={location.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
+          )}
+          
+          {/* Error Message */}
+          {error && (
+            <div className="absolute top-20 left-4 right-4 bg-red-50 border border-red-200 text-red-700 rounded-xl shadow-lg p-3 z-10 max-w-md mx-auto">
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+          
+          {/* Floating Weather Results */}
+          {weather && fishingRecommendation && (
+            <div className="absolute bottom-4 left-4 right-4 max-w-md mx-auto z-10 pointer-events-auto">
+              <div 
+                className="max-h-[60vh] overflow-y-auto overscroll-contain"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                <div className="space-y-3 pb-2">
+                  <FishingAnalysis recommendation={fishingRecommendation} />
+                  <WeatherCard weather={weather} />
+                  <ForecastCard 
+                    forecast={forecast} 
+                    onDayClick={handleDayClick}
+                  />
                   <button
-                    onClick={() => {
-                      setCity(location.name);
-                      fetchWeather(location.name);
-                    }}
-                    className="flex-1 text-left text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                    onClick={addCurrentToSaved}
+                    className="w-full flex items-center justify-center gap-2 bg-white/95 backdrop-blur-sm text-yellow-700 py-3 rounded-xl hover:bg-yellow-50 transition-colors border border-yellow-200 shadow-lg active:scale-95"
                   >
-                    {location.name}
-                  </button>
-                  <button
-                    onClick={() => removeLocation(location.id)}
-                    className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="删除"
-                  >
-                    <Trash2 className="w-4 h-4" />
+                    <Star className="w-5 h-5" />
+                    <span className="font-medium">收藏当前钓点</span>
                   </button>
                 </div>
-              ))}
+              </div>
             </div>
+          )}
+        </div>
+      ) : (
+      <div className="max-w-md mx-auto px-4 pt-4 space-y-4">
+        {/* Search Panel */}
+        <SearchPanel
+          city={city}
+          setCity={setCity}
+          loading={loading}
+          error={error}
+          successMessage={successMessage}
+          onSubmit={handleSubmit}
+          onUseLocation={fetchWeatherByLocation}
+          onAddToSaved={addCurrentToSaved}
+          showAddButton={!!weather}
+        />
 
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-500 text-center">
-                点击钓点名称快速查看天气
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Weather Display */}
+        {/* Weather Results */}
         {weather && fishingRecommendation && (
-          <div ref={resultRef} className="space-y-6">
-            {/* Share Content - 只包含钓鱼推荐和天气详情 */}
-            <div ref={shareContentRef} className="space-y-6">
-              {/* Time Info Header */}
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl shadow-2xl p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Fish className="w-6 h-6 flex-shrink-0" />
-                    <span className="text-xl font-bold whitespace-nowrap leading-none">钓鱼天气</span>
-                  </div>
-                  <div className="flex items-center justify-end flex-shrink-0">
-                    <div className="text-sm font-medium whitespace-nowrap leading-none">
-                      {new Date().toLocaleDateString('zh-CN', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric',
-                        weekday: 'long'
-                      })} {new Date().toLocaleTimeString('zh-CN', { 
-                        hour: '2-digit', 
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Fishing Recommendation Card */}
-              <div className="bg-white rounded-2xl shadow-2xl p-6">
-              <div className={`${fishingRecommendation.color} text-white rounded-xl p-6 mb-4`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Fish className="w-10 h-10" />
-                    <div>
-                      <h2 className="text-2xl font-bold">{fishingRecommendation.recommendation}</h2>
-                      <p className="text-sm opacity-90">钓鱼指数: {fishingRecommendation.level}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-4xl font-bold">{fishingRecommendation.score}</div>
-                    <div className="text-sm opacity-90">分</div>
-                  </div>
-                </div>
-              </div>
-
-              {fishingRecommendation.reasons.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="font-semibold text-gray-700 mb-2">不利因素:</h3>
-                  <ul className="space-y-1">
-                    {fishingRecommendation.reasons.map((reason, index) => (
-                      <li key={index} className="text-sm text-gray-600 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
-                        {reason}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {fishingRecommendation.tips.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">提示建议:</h3>
-                  <ul className="space-y-1">
-                    {fishingRecommendation.tips.map((tip, index) => (
-                      <li key={index} className="text-sm text-gray-600 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                        {tip}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* Weather Details Card */}
-            <div className="bg-white rounded-2xl shadow-2xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">{weather.name}</h2>
-                  <p className="text-gray-600 capitalize">{weather.weather[0].description}</p>
-                </div>
-                <div className="text-blue-500">
-                  {getWeatherIcon(weather.weather[0].main)}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl">
-                  <div className="flex items-center gap-2 text-orange-600 mb-2">
-                    <ThermometerSun className="w-5 h-5" />
-                    <span className="text-sm font-medium">温度</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{Math.round(weather.main.temp)}°C</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    体感 {Math.round(weather.main.feels_like)}°C
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl">
-                  <div className="flex items-center gap-2 text-blue-600 mb-2">
-                    <Wind className="w-5 h-5" />
-                    <span className="text-sm font-medium">风速</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{weather.wind.speed} m/s</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {weather.wind.speed < 2 ? '微风' : weather.wind.speed < 5 ? '轻风' : weather.wind.speed < 8 ? '和风' : '强风'}
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-4 rounded-xl">
-                  <div className="flex items-center gap-2 text-cyan-600 mb-2">
-                    <Droplets className="w-5 h-5" />
-                    <span className="text-sm font-medium">湿度</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{weather.main.humidity}%</p>
-                </div>
-
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl">
-                  <div className="flex items-center gap-2 text-purple-600 mb-2">
-                    <Cloud className="w-5 h-5" />
-                    <span className="text-sm font-medium">气压</span>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-800">{weather.main.pressure}</p>
-                  <p className="text-xs text-gray-600 mt-1">hPa</p>
-                </div>
-              </div>
-            </div>
-            </div>
-
-            {/* Share Button */}
-            <div className="bg-white rounded-2xl shadow-2xl p-6">
-              <button
-                onClick={generateShareImage}
-                disabled={isGeneratingImage}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-              >
-                {isGeneratingImage ? (
-                  <>
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="font-semibold text-lg">生成中...</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-6 h-6" />
-                    <span className="font-semibold text-lg">生成分享图片</span>
-                    <Download className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-              <p className="text-center text-sm text-gray-500 mt-3">
-                点击生成图片，可分享到社交媒体
-              </p>
-            </div>
+          <div ref={shareContentRef} className="space-y-4">
+            <FishingAnalysis recommendation={fishingRecommendation} />
+            <WeatherCard weather={weather} />
+            <ForecastCard 
+              forecast={forecast} 
+              onDayClick={handleDayClick}
+            />
           </div>
+        )}
+
+        {/* Share Button */}
+        {weather && fishingRecommendation && (
+          <ShareButton
+            onClick={generateShareImage}
+            isGenerating={isGeneratingImage}
+          />
         )}
 
         {/* Footer */}
-        <div className="text-center text-white text-sm mt-8 pb-8 opacity-80">
+        <div className="text-center text-white text-xs pt-4 pb-2 opacity-80">
           <p>数据仅供参考，实际情况请以现场为准</p>
-          <p className="mt-2">Powered by Open-Meteo & OpenStreetMap</p>
+          <p className="mt-1">Powered by Open-Meteo & OpenStreetMap</p>
         </div>
       </div>
+      )}
+      </div>
+
+      {/* Bottom Navigation */}
+      <BottomNav activeTab={currentPage} onTabChange={handlePageChange} />
+
+      {/* Weather Detail Modal */}
+      {selectedDayDetail && (
+        <WeatherDetail
+          day={selectedDayDetail}
+          locationName={weather?.name || city}
+          onClose={handleCloseDayDetail}
+        />
+      )}
     </div>
   );
 }

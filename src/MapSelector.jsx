@@ -25,7 +25,7 @@ function MapClickHandler({ onLocationSelect }) {
   return null;
 }
 
-function MapSelector({ onLocationSelect, selectedLocation, center, zoom }) {
+function MapSelector({ onLocationSelect, selectedLocation, center, zoom, fullScreen = false }) {
   const [mapCenter, setMapCenter] = useState(center || [30.5928, 114.3055]); // 默认武汉
   const [mapZoom, setMapZoom] = useState(zoom || 11);
 
@@ -36,11 +36,11 @@ function MapSelector({ onLocationSelect, selectedLocation, center, zoom }) {
   }, [center]);
 
   return (
-    <div className="relative w-full h-[400px] rounded-xl overflow-hidden shadow-lg">
+    <div className={`relative w-full z-0 ${fullScreen ? 'h-full' : 'h-[400px] rounded-xl overflow-hidden shadow-lg'}`}>
       <MapContainer
         center={mapCenter}
         zoom={mapZoom}
-        className="w-full h-full"
+        className="w-full h-full z-0"
         zoomControl={true}
       >
         <TileLayer
@@ -70,10 +70,12 @@ function MapSelector({ onLocationSelect, selectedLocation, center, zoom }) {
         )}
       </MapContainer>
       
-      {/* 地图说明 */}
-      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-md text-xs">
-        <p className="text-gray-700 font-medium">💡 点击地图标记钓点</p>
-      </div>
+      {/* 地图说明 - 仅非全屏模式显示 */}
+      {!fullScreen && (
+        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur px-3 py-2 rounded-lg shadow-md text-xs">
+          <p className="text-gray-700 font-medium">💡 点击地图标记钓点</p>
+        </div>
+      )}
     </div>
   );
 }
