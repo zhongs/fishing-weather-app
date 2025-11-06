@@ -580,12 +580,13 @@ function App() {
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 <div className="space-y-3 pb-2">
-                  <FishingAnalysis recommendation={fishingRecommendation} />
-                  <WeatherCard weather={weather} />
+                  {/* 5日预报 - 优先显示 */}
                   <ForecastCard 
                     forecast={forecast} 
                     onDayClick={handleDayClick}
                   />
+                  <FishingAnalysis recommendation={fishingRecommendation} />
+                  <WeatherCard weather={weather} />
                   <button
                     onClick={addCurrentToSaved}
                     className="w-full flex items-center justify-center gap-2 bg-white/95 backdrop-blur-sm text-yellow-700 py-3 rounded-xl hover:bg-yellow-50 transition-colors border border-yellow-200 shadow-lg active:scale-95"
@@ -615,13 +616,18 @@ function App() {
 
         {/* Weather Results */}
         {weather && fishingRecommendation && (
-          <div ref={shareContentRef} className="space-y-4">
-            <FishingAnalysis recommendation={fishingRecommendation} />
-            <WeatherCard weather={weather} />
+          <div className="space-y-4">
+            {/* 5日预报 - 优先显示 */}
             <ForecastCard 
               forecast={forecast} 
               onDayClick={handleDayClick}
             />
+            
+            {/* 当前天气详情 */}
+            <div ref={shareContentRef} className="space-y-4">
+              <FishingAnalysis recommendation={fishingRecommendation} />
+              <WeatherCard weather={weather} />
+            </div>
           </div>
         )}
 
