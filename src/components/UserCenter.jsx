@@ -102,7 +102,7 @@ function UserCenter({ locations, onSelect, onRemove, onClose }) {
                     </button>
                     <button
                       onClick={() => onRemove(location.id)}
-                      className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors md:opacity-0 md:group-hover:opacity-100"
                       title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -129,7 +129,7 @@ function UserCenter({ locations, onSelect, onRemove, onClose }) {
             <li>• 在主页搜索城市后，点击"收藏当前钓点"添加</li>
             <li>• 使用地图标点功能，精确定位你的钓点位置</li>
             <li>• 收藏的钓点会自动保存，下次打开应用时依然存在</li>
-            <li>• 悬停钓点卡片可显示删除按钮</li>
+            <li>• 点击钓点右侧的删除按钮可移除收藏</li>
           </ul>
         </div>
       </div>
