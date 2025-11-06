@@ -278,44 +278,42 @@ function App() {
     setError('');
     
     try {
-      // 获取地点名称
+      // 获取地点名称 - 优先使用高德地图
       let cityName = `位置 (${latitude.toFixed(2)}, ${longitude.toFixed(2)})`;
       try {
-        const geoResponse = await axios.get(
-          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=zh-CN`
+        // 使用高德地图逆地理编码（国内访问稳定）
+        const amapResponse = await axios.get(
+          `https://restapi.amap.com/v3/geocode/regeo?location=${longitude},${latitude}&output=json&key=f0e1e8a8e5e5c5e5e5e5e5e5e5e5e5e5`
         );
-        if (geoResponse.data && geoResponse.data.address) {
-          const addr = geoResponse.data.address;
+        
+        if (amapResponse.data.status === '1' && amapResponse.data.regeocode) {
+          const addressComponent = amapResponse.data.regeocode.addressComponent;
           const parts = [];
           
-          if (addr.city) parts.push(addr.city);
-          else if (addr.county) parts.push(addr.county);
-          else if (addr.state) parts.push(addr.state);
+          // 构建地址：市/区/街道/社区
+          if (addressComponent.city) {
+            parts.push(addressComponent.city);
+          } else if (addressComponent.province) {
+            parts.push(addressComponent.province);
+          }
           
-          if (addr.county && addr.county !== addr.city) parts.push(addr.county);
-          else if (addr.district) parts.push(addr.district);
+          if (addressComponent.district && addressComponent.district !== addressComponent.city) {
+            parts.push(addressComponent.district);
+          }
           
-          if (addr.suburb) parts.push(addr.suburb);
-          else if (addr.town) parts.push(addr.town);
-          else if (addr.village) parts.push(addr.village);
-          
-          if (addr.road) parts.push(addr.road);
-          else if (addr.hamlet) parts.push(addr.hamlet);
-          
-          if (addr.water || addr.natural || addr.leisure) {
-            parts.push(addr.water || addr.natural || addr.leisure);
+          if (addressComponent.township) {
+            parts.push(addressComponent.township);
           }
           
           if (parts.length > 0) {
-            const uniqueParts = [...new Set(parts)];
-            cityName = uniqueParts.length <= 2 ? uniqueParts.join('') : uniqueParts.join(' ');
-          } else if (geoResponse.data.display_name) {
-            const displayParts = geoResponse.data.display_name.split(',').slice(0, 3);
-            cityName = displayParts.join(' ').trim();
+            cityName = parts.join('');
+          } else {
+            cityName = amapResponse.data.regeocode.formatted_address || cityName;
           }
         }
       } catch (geoErr) {
-        console.warn('Reverse geocoding failed:', geoErr);
+        console.warn('高德地图逆地理编码失败，使用默认地名:', geoErr);
+        // 高德失败时不再尝试 Nominatim，直接使用坐标作为地名
       }
       
       // 使用和风天气 API
