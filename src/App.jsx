@@ -202,6 +202,12 @@ function App() {
   const getCityCoordinates = async (cityName) => {
     try {
       const amapKey = import.meta.env.VITE_AMAP_KEY;
+      
+      if (!amapKey || amapKey === 'your_amap_key_here') {
+        console.error('高德地图 Key 未配置或使用默认值');
+        throw new Error('高德地图 API Key 未正确配置，请检查环境变量 VITE_AMAP_KEY');
+      }
+      
       const response = await axios.get(
         `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(cityName)}&output=json&key=${amapKey}`
       );
@@ -284,33 +290,39 @@ function App() {
       try {
         // 使用高德地图逆地理编码（国内访问稳定）
         const amapKey = import.meta.env.VITE_AMAP_KEY;
-        const amapResponse = await axios.get(
-          `https://restapi.amap.com/v3/geocode/regeo?location=${longitude},${latitude}&output=json&key=${amapKey}`
-        );
         
-        if (amapResponse.data.status === '1' && amapResponse.data.regeocode) {
-          const addressComponent = amapResponse.data.regeocode.addressComponent;
-          const parts = [];
-          
-          // 构建地址：市/区/街道/社区
-          if (addressComponent.city) {
-            parts.push(addressComponent.city);
-          } else if (addressComponent.province) {
-            parts.push(addressComponent.province);
-          }
-          
-          if (addressComponent.district && addressComponent.district !== addressComponent.city) {
-            parts.push(addressComponent.district);
-          }
-          
-          if (addressComponent.township) {
-            parts.push(addressComponent.township);
-          }
-          
-          if (parts.length > 0) {
-            cityName = parts.join('');
-          } else {
-            cityName = amapResponse.data.regeocode.formatted_address || cityName;
+        if (!amapKey || amapKey === 'your_amap_key_here') {
+          console.warn('高德地图 Key 未配置，跳过逆地理编码');
+          // 继续使用默认地名（坐标）
+        } else {
+          const amapResponse = await axios.get(
+            `https://restapi.amap.com/v3/geocode/regeo?location=${longitude},${latitude}&output=json&key=${amapKey}`
+          );
+        
+          if (amapResponse.data.status === '1' && amapResponse.data.regeocode) {
+            const addressComponent = amapResponse.data.regeocode.addressComponent;
+            const parts = [];
+            
+            // 构建地址：市/区/街道/社区
+            if (addressComponent.city) {
+              parts.push(addressComponent.city);
+            } else if (addressComponent.province) {
+              parts.push(addressComponent.province);
+            }
+            
+            if (addressComponent.district && addressComponent.district !== addressComponent.city) {
+              parts.push(addressComponent.district);
+            }
+            
+            if (addressComponent.township) {
+              parts.push(addressComponent.township);
+            }
+            
+            if (parts.length > 0) {
+              cityName = parts.join('');
+            } else {
+              cityName = amapResponse.data.regeocode.formatted_address || cityName;
+            }
           }
         }
       } catch (geoErr) {
