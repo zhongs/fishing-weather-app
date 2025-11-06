@@ -9,7 +9,6 @@ import FishingAnalysis from './components/FishingAnalysis';
 import WeatherCard from './components/WeatherCard';
 import ShareButton from './components/ShareButton';
 import ForecastCard from './components/ForecastCard';
-import WeatherDetail from './components/WeatherDetail';
 import UserCenter from './components/UserCenter';
 import BottomNav from './components/BottomNav';
 import { getNowWeather, get7DayForecast, convertQWeatherToAppFormat } from './utils/qweatherApi';
@@ -31,7 +30,6 @@ function App() {
   const [mapCenter] = useState([30.5928, 114.3055]);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [forecast, setForecast] = useState(null);
-  const [selectedDayDetail, setSelectedDayDetail] = useState(null);
   const [showMapWeather, setShowMapWeather] = useState(true);
   const shareContentRef = useRef(null);
 
@@ -508,14 +506,6 @@ function App() {
     setShowMapWeather(false);
   };
 
-  const handleDayClick = (day) => {
-    setSelectedDayDetail(day);
-  };
-
-  const handleCloseDayDetail = () => {
-    setSelectedDayDetail(null);
-  };
-
   return (
     <div className="h-full w-full bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 flex flex-col overflow-hidden">
       {/* Fixed Header - 仅在个人中心页面隐藏 */}
@@ -594,9 +584,10 @@ function App() {
                 <div className="relative bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white px-6 py-5 shadow-lg flex-shrink-0">
                   <button
                     onClick={handleCloseMapWeather}
-                    className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-all active:scale-95"
+                    className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-all active:scale-95 border border-white/30"
+                    aria-label="关闭"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-6 h-6 stroke-[3]" />
                   </button>
                   
                   <div className="pr-12">
@@ -620,10 +611,7 @@ function App() {
                   <div className="space-y-3">
                     <FishingAnalysis recommendation={fishingRecommendation} />
                     <WeatherCard weather={weather} />
-                    <ForecastCard 
-                      forecast={forecast} 
-                      onDayClick={handleDayClick}
-                    />
+                    <ForecastCard forecast={forecast} />
                     <button
                       onClick={addCurrentToSaved}
                       className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white py-3 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-lg active:scale-95"
@@ -656,10 +644,7 @@ function App() {
         {weather && fishingRecommendation && (
           <div className="space-y-4">
             {/* 5日预报 - 优先显示 */}
-            <ForecastCard 
-              forecast={forecast} 
-              onDayClick={handleDayClick}
-            />
+            <ForecastCard forecast={forecast} />
             
             {/* 当前天气详情 */}
             <div ref={shareContentRef} className="space-y-4">
@@ -682,15 +667,6 @@ function App() {
 
       {/* Bottom Navigation */}
       <BottomNav activeTab={currentPage} onTabChange={handlePageChange} />
-
-      {/* Weather Detail Modal */}
-      {selectedDayDetail && (
-        <WeatherDetail
-          day={selectedDayDetail}
-          locationName={weather?.name || city}
-          onClose={handleCloseDayDetail}
-        />
-      )}
     </div>
   );
 }

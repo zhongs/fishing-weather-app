@@ -122,7 +122,7 @@ function MapSelector({ onLocationSelect, selectedLocation, center, zoom, fullScr
       <button
         onClick={handleGetCurrentLocation}
         disabled={isLocating}
-        className="leaflet-bar absolute left-[10px] top-[90px] z-[1000] bg-white hover:bg-gray-50 border-2 border-gray-300 rounded-sm shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="leaflet-bar absolute left-[12px] top-[90px] z-[1000] bg-white hover:bg-gray-50 border-2 border-gray-300 rounded-sm shadow-md transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ width: '30px', height: '30px' }}
         title="定位到我的位置"
       >

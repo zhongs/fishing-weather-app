@@ -1,7 +1,7 @@
 import { Calendar, TrendingUp, TrendingDown, X } from 'lucide-react';
 import { getQWeatherIcon, analyzeFishingConditions as analyzeForecastDay } from '../utils/qweatherIcons.jsx';
 
-function ForecastCard({ forecast, onDayClick, onClose, showClose = false }) {
+function ForecastCard({ forecast, onClose, showClose = false }) {
   if (!forecast || forecast.length === 0) return null;
 
   return (
@@ -10,7 +10,7 @@ function ForecastCard({ forecast, onDayClick, onClose, showClose = false }) {
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-5 h-5 text-blue-500" />
           <h3 className="text-base font-bold text-gray-800">未来7天预报</h3>
-          {showClose ? (
+          {showClose && (
             <button
               onClick={onClose}
               className="ml-auto p-1.5 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
@@ -18,8 +18,6 @@ function ForecastCard({ forecast, onDayClick, onClose, showClose = false }) {
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
-          ) : (
-            <span className="text-xs text-gray-500 ml-auto">点击查看详情</span>
           )}
         </div>
         
@@ -33,8 +31,7 @@ function ForecastCard({ forecast, onDayClick, onClose, showClose = false }) {
             return (
               <div
                 key={index}
-                onClick={() => onDayClick && onDayClick(day)}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all cursor-pointer active:scale-[0.98] hover:shadow-md"
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl transition-all"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="text-blue-500 flex-shrink-0">
