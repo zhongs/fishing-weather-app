@@ -524,7 +524,7 @@ function App() {
 
       {/* Main Content - Scrollable */}
       <div 
-        className="flex-1 overflow-y-scroll pb-20"
+        className="flex-1 overflow-y-scroll pb-16"
         style={{ 
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
